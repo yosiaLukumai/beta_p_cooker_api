@@ -1,0 +1,23 @@
+import express from 'express';
+import { userRoutes } from './routes/users';
+import { storeRoutes } from './routes/stores';
+
+import cors from "cors";
+
+const app = express();
+
+
+app.use(express.json());
+
+
+// enabling CORS
+app.use(cors());
+
+// testing the server
+app.get("/ping", (req, res) => {
+    res.send("pong 👌 positive cooker api is Live!");
+});
+
+userRoutes(app);
+storeRoutes(app);
+export default app;
