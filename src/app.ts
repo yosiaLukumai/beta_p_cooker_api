@@ -15,7 +15,7 @@ app.use(cors());
 
 // testing the server
 app.get("/ping", (req, res) => {
-    res.send("pong 👌 positive cooker api is Live!");
+    res.send("pong 👌 positive cooker api is Live! for real");
 });
 
 userRoutes(app);
