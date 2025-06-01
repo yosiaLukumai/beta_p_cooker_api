@@ -10,10 +10,6 @@ const admingEmail = process.env.ADMIN_EMAIL
 const admingPhone = process.env.ADMIN_PHONE;
 
 
-
-
-
-
 (async () => {
     
     if (!MONGO_URI || !adminPassword || !admingEmail || !admingPhone) {

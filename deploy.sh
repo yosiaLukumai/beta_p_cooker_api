@@ -44,6 +44,14 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+
+# build the project
+echo "Building the project..."
+npm run build || {
+  echo "Error: npm run build failed."
+  exit 1
+}
+
 echo "Restarting Node.js application (PM2 ID $PM2_PROCESS_ID)..."
 
 pm2 stop "$PM2_PROCESS_ID"

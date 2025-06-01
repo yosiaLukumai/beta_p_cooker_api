@@ -5,13 +5,6 @@ import { comparePassword, hashPassword } from '../util/passwords';
 
 
 
-//          name: string;
-//   email: string;
-//   phone: string;
-//   role: 'admin' | 'sales' | 'accountant';
-//   is_active: boolean;
-//   otp?: string;
-//   otp_expires_at?: Date;
 export const createUser = async (req: Request, res: Response): Promise<any> => {
     const { email, name, password, role } = req.body;
     try {
