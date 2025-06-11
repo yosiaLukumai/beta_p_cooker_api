@@ -3,6 +3,7 @@ import { userRoutes } from './routes/users';
 import { storeRoutes } from './routes/stores';
 
 import cors from "cors";
+import { productRoutes } from './routes/product';
 
 const app = express();
 
@@ -20,4 +21,5 @@ app.get("/ping", (req, res) => {
 
 userRoutes(app);
 storeRoutes(app);
+productRoutes(app);
 export default app;

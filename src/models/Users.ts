@@ -23,7 +23,7 @@ const UserSchema: Schema = new Schema<IUser>(
     lname: { type: String, required: true, index: true },
     email: { type: String, required: true, unique: true, index: true },
     phone: { type: String, required: true, unique: true, index: true },
-    password: { type: String, required: true }, 
+    password: { type: String, default: null }, 
     role: {
       type: String,
       enum: ['admin', 'sales', 'accountant', "technician"],
