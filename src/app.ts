@@ -4,11 +4,15 @@ import { storeRoutes } from './routes/stores';
 
 import cors from "cors";
 import { productRoutes } from './routes/product';
+import { inventoryRoutes } from './routes/inventory';
+import { transferRoutes } from './routes/Transfer';
+
 
 const app = express();
 
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 // enabling CORS
@@ -22,4 +26,13 @@ app.get("/ping", (req, res) => {
 userRoutes(app);
 storeRoutes(app);
 productRoutes(app);
+transferRoutes(app);
+inventoryRoutes(app);
+
+
+// allow uploading files
+app.use('/public', express.static('public'));
+
+
+
 export default app;

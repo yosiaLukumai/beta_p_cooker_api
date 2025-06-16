@@ -3,12 +3,13 @@ import Stores from '../models/stores';
 import { CreateResponse } from '../util/response';
 
 export const createStore = async (req: Request, res: Response): Promise<any> => {
-    const { name, region, contact, store_code, location } = req.body;
+    const { name, region, contact, store_code, location, hq } = req.body;
     try {
         let saved = await Stores.create({
             name,
             region,
             contact,
+            hq,
             store_code,
             location: {
                 address: location?.address || "",

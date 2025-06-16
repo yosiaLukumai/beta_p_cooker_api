@@ -1,0 +1,15 @@
+import express, { Router, Express } from 'express';
+import * as transferController from '../controllers/Transfer';
+
+const router: Router = express.Router();
+
+const transferRoutes = (app: Express): Express => {
+    router.get('/approve/:id/:approver_id', transferController.ApproveProductTransfer);
+    router.get('/reject/:id', transferController.RejectProductTransfer);
+    router.post('/', transferController.TransferrStock);
+    router.get("", transferController.allTransfers);
+
+    return app.use('/stock', router);
+};
+
+export { transferRoutes };

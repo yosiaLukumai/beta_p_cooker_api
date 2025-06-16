@@ -14,7 +14,6 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
         const { sys_user_role } = req.query;
         const { store_id, fname, lname, email, phone, role } = req.body;
 
-
         if (sys_user_role !== 'admin') {
             return res.json(CreateResponse(false, null, "You are not allowed to create user"));
         }

@@ -1,0 +1,115 @@
+import { Request, Response } from 'express';
+import ProductTransfer from '../models/ProductTransfer';
+import StoreProduct from '../models/StoreProduct';
+import { CreateResponse } from '../util/response';
+import mongoose from 'mongoose';
+
+
+export const TransferrStock = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { product_id, from_store, to_store, quantity, initiated_by } = req.body;
+        // check the id is valid mongodb object id
+        if (!mongoose.Types.ObjectId.isValid(product_id) || !mongoose.Types.ObjectId.isValid(from_store) || !mongoose.Types.ObjectId.isValid(to_store) || !mongoose.Types.ObjectId.isValid(initiated_by)) {
+            throw new Error('Invalid product id or store id');
+        }
+        // save the product transfer
+        const productTransfer = await ProductTransfer.create({
+            product_id,
+            from_store,
+            to_store,
+            quantity,
+            initiated_by,
+            transfer_status: 'pending',
+        });
+
+        if (!productTransfer) {
+            return res.json(CreateResponse(false, null, "Failed to add product transfer"));
+        }
+
+        return res.json(CreateResponse(true, "Product transfer added successfully"));
+
+    } catch (error) {
+        return res.json(CreateResponse(false, null, error));
+    }
+};
+
+export const ApproveProductTransfer = async (req: Request, res: Response): Promise<any> => {
+    // transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { id , approver_id} = req.params;
+
+        // check the id is valid mongodb object id
+        if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(approver_id)) {
+            throw new Error('Invalid transfer id or approver id');
+        }
+
+        const transfer = await ProductTransfer.findById(id).session(session);
+        if (!transfer || transfer.transfer_status !== 'pending') throw new Error('Invalid transfer');
+
+        const fromStoreProduct = await StoreProduct.findOne({
+            product_id: transfer.product_id,
+            store_id: transfer.from_store,
+        }).session(session);
+
+        if (!fromStoreProduct || fromStoreProduct.quantity < transfer.quantity) {
+            throw new Error('Insufficient stock at source');
+        }
+
+        fromStoreProduct.quantity -= transfer.quantity;
+        await fromStoreProduct.save({ session });
+
+        const toStoreProduct = await StoreProduct.findOneAndUpdate(
+            { product_id: transfer.product_id, store_id: transfer.to_store },
+            { $inc: { quantity: transfer.quantity } },
+            { upsert: true, new: true, session }
+        );
+
+
+        transfer.transfer_status = 'approved';
+        transfer.approved_by = new mongoose.Types.ObjectId(approver_id);
+        await transfer.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.json(CreateResponse(true, toStoreProduct));
+
+    } catch (error: any) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.json(CreateResponse(false, null, error.message || 'An error occurred during approval'));
+
+    }
+}
+
+export const RejectProductTransfer = async (req: Request, res: Response): Promise<any> => {
+    try {
+        // just mark the transfer as rejected
+        const { id } = req.params;
+        const transfer = await ProductTransfer.findById(id);
+        if (!transfer) {
+            return res.json(CreateResponse(false, null, "Product transfer not found"));
+        }
+        if (transfer.transfer_status !== 'pending') {
+            return res.json(CreateResponse(false, null, "Product transfer is not pending"));
+        }
+        const updated = await ProductTransfer.findByIdAndUpdate(id, { transfer_status: 'rejected' });
+        if (!updated) {
+            return res.json(CreateResponse(false, null, "Failed to reject product transfer"));
+        }
+        return res.json(CreateResponse(true, "Product transfer rejected successfully"));
+    } catch (error) {
+        return res.json(CreateResponse(false, null, error));
+    }
+};
+
+
+export const allTransfers = async (req: Request, res: Response): Promise<any> => {
+    try {
+        
+    } catch (error) {
+        
+    }
+}

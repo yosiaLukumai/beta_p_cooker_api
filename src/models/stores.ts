@@ -4,6 +4,7 @@ export interface IStore extends Document {
     name: string;
     region: string;
     contact: string;
+    hq: boolean;
     store_code?: string;
     location?: {
         address?: string;
@@ -21,6 +22,7 @@ const StoreSchema = new Schema<IStore>(
         region: { type: String, required: true },
         contact: { type: String },
         store_code: { type: String, unique: true, sparse: true },
+        hq: { type: Boolean, default: false },
         location: {
             address: { type: String },
             lat: { type: Number },
