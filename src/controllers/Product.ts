@@ -7,7 +7,7 @@ import path from 'path';
 
 export const CreateProduct = async (req: Request, res: Response): Promise<any> => {
   const imagePaths = (req.files as Express.Multer.File[])?.map(file =>
-    file.path.replace('public/', '')
+    file.path.replace('', '')
   );
 
   console.log(imagePaths);
