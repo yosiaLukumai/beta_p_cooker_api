@@ -10,6 +10,9 @@ export const CreateProduct = async (req: Request, res: Response): Promise<any> =
     file.path.replace('public/', '')
   );
 
+  console.log(imagePaths);
+  
+
   try {
     const {
       name,
