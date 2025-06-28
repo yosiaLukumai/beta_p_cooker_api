@@ -8,7 +8,7 @@ const transferRoutes = (app: Express): Express => {
     router.get('/reject/:id', transferController.RejectProductTransfer);
     router.post('/', transferController.TransferrStock);
     router.get("", transferController.allTransfers);
-
+    router.get('/kpi', transferController.TransferKPI);
     return app.use('/stock/transfer', router);
 };
 

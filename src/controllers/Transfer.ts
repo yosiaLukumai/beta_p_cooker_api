@@ -151,3 +151,67 @@ export const allTransfers = async (req: Request, res: Response): Promise<any> =>
         return res.json(CreateResponse(false, null, error));
     }
 }
+
+
+
+// export const TransferKPI = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { store_id  } = req.query;
+//         if (!store_id || mongoose.isValidObjectId(store_id) === false) {
+//             return res.json(CreateResponse(false, null, "Invalid store_id"));
+//         }
+
+//         const transfers = await ProductTransfer.aggregate([
+//             {
+//                 $match: {
+//                     $or: [
+//                         { from_store: new mongoose.Types.ObjectId(store_id as string) },
+//                         { to_store: new mongoose.Types.ObjectId(store_id as string) }
+//                     ]
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: "$transfer_status",
+//                     count: { $sum: 1 }
+//                 }
+//             }
+//         ]);
+
+//         return res.json(CreateResponse(true, transfers));
+
+//     } catch (error) {
+//         return res.json(CreateResponse(false, null, error));
+//     }
+// }   
+
+
+
+export const TransferKPI = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { store_id } = req.query;
+    if (!store_id || !mongoose.isValidObjectId(store_id)) {
+      return res.json(CreateResponse(false, null, "Invalid store_id"));
+    }
+
+    const objectId = new mongoose.Types.ObjectId(store_id as string);
+
+    const [incoming, outgoing] = await Promise.all([
+      ProductTransfer.countDocuments({
+        to_store: objectId,
+        transfer_status: 'pending',
+      }),
+      ProductTransfer.countDocuments({
+        from_store: objectId,
+        transfer_status: 'pending',
+      }),
+    ]);
+
+    return res.json(CreateResponse(true, {
+      incoming,
+      outgoing,
+    }));
+  } catch (error) {
+    return res.json(CreateResponse(false, null, error));
+  }
+};
