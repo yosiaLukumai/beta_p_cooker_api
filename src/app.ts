@@ -6,6 +6,8 @@ import cors from "cors";
 import { productRoutes } from './routes/product';
 import { inventoryRoutes } from './routes/inventory';
 import { transferRoutes } from './routes/Transfer';
+import { salesRoutes } from './routes/sales';
+import { customerRoutes } from './routes/customers';
 
 
 const app = express();
@@ -27,6 +29,8 @@ userRoutes(app);
 storeRoutes(app);
 productRoutes(app);
 transferRoutes(app);
+salesRoutes(app);
+customerRoutes(app);
 inventoryRoutes(app);
 
 

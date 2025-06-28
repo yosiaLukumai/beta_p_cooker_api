@@ -134,7 +134,7 @@ export const allTransfers = async (req: Request, res: Response): Promise<any> =>
         return res.json(CreateResponse(true, incomingTransfers));
         }
         if(outgoing && !incoming) { 
-                    const outgoingTransfers = await ProductTransfer.find({ from_store: store_id, transfer_status: transfer_status || 'pending' })
+        const outgoingTransfers = await ProductTransfer.find({ from_store: store_id, transfer_status: transfer_status || 'pending' })
         .populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"])
         .populate("to_store", ["name", "hq"]).select('product_id quantity from_store')
         .populate('from_store', 'name hq')
