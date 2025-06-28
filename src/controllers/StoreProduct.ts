@@ -47,16 +47,21 @@ export const HQaddStock = async (req: Request, res: Response): Promise<any> => {
 export const StockByStore = async (req: Request, res: Response): Promise<any> => {
     try {
         const { store_id } = req.query;
-        if (!store_id || mongoose.isValidObjectId(store_id) === false) {
-            return res.json(CreateResponse(false, null, "Invalid store_id"));
-        }
+
         // all store stock if it's admin
         if (req.query.role === 'admin' && store_id === 'all') {
-            const products = await StoreProduct.find().populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"]).select('product_id quantity');
+            const products = await StoreProduct.find().populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"]).populate("store_id", ["name", "hq"]).select('product_id quantity store_id');
             if (!products) {
                 return res.json(CreateResponse(false, null, "Failed to get products"));
             }
             return res.json(CreateResponse(true, products));
+        }
+
+        if (req.query.role != "admin" && store_id == "all") {
+            return res.json(CreateResponse(false, null, "Not allowed"));
+        }
+        if (!store_id || mongoose.isValidObjectId(store_id) === false) {
+            return res.json(CreateResponse(false, null, "Invalid store_id"));
         }
         const products = await StoreProduct.find({ store_id }).populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"]).select('product_id quantity');
         if (!products) {

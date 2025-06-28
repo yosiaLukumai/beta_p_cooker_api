@@ -9,7 +9,7 @@ const transferRoutes = (app: Express): Express => {
     router.post('/', transferController.TransferrStock);
     router.get("", transferController.allTransfers);
 
-    return app.use('/stock', router);
+    return app.use('/stock/transfer', router);
 };
 
 export { transferRoutes };

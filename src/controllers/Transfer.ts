@@ -8,7 +8,6 @@ import mongoose from 'mongoose';
 export const TransferrStock = async (req: Request, res: Response): Promise<any> => {
     try {
         const { product_id, from_store, to_store, quantity, initiated_by } = req.body;
-        // check the id is valid mongodb object id
         if (!mongoose.Types.ObjectId.isValid(product_id) || !mongoose.Types.ObjectId.isValid(from_store) || !mongoose.Types.ObjectId.isValid(to_store) || !mongoose.Types.ObjectId.isValid(initiated_by)) {
             throw new Error('Invalid product id or store id');
         }
@@ -38,7 +37,7 @@ export const ApproveProductTransfer = async (req: Request, res: Response): Promi
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { id , approver_id} = req.params;
+        const { id, approver_id } = req.params;
 
         // check the id is valid mongodb object id
         if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(approver_id)) {
@@ -108,8 +107,46 @@ export const RejectProductTransfer = async (req: Request, res: Response): Promis
 
 export const allTransfers = async (req: Request, res: Response): Promise<any> => {
     try {
-        
+        const { store_id, incoming, outgoing, transfer_status } = req.query;
+        // transfer_status can be pending, approved, rejected or all by default result pending
+        if (incoming && outgoing) {
+            return res.json(CreateResponse(false, null, "Incoming and outgoing cannot be true at the same time"));
+        }
+
+        if (!store_id || mongoose.isValidObjectId(store_id) === false) {
+            return res.json(CreateResponse(false, null, "Invalid store_id"));
+        }
+
+
+
+        // by default incoming is true
+        if(incoming && !outgoing) { 
+                    const incomingTransfers = await ProductTransfer.find({ to_store: store_id, transfer_status: transfer_status || 'pending' })
+        .populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"])
+        .populate("from_store", ["name", "hq"]).select('product_id quantity to_store')
+        .sort({ createdAt: -1 })
+        .limit(10);
+        if (!incomingTransfers) {
+            return res.json(CreateResponse(false, null, "Failed to get incoming transfers"));
+        }
+        return res.json(CreateResponse(true, incomingTransfers));
+        }
+        if(outgoing && !incoming) { 
+                    const outgoingTransfers = await ProductTransfer.find({ from_store: store_id, transfer_status: transfer_status || 'pending' })
+        .populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"])
+        .populate("to_store", ["name", "hq"]).select('product_id quantity from_store')
+        .sort({ createdAt: -1 })
+        .limit(10);
+        if (!outgoingTransfers) {
+            return res.json(CreateResponse(false, null, "Failed to get outgoing transfers"));
+        }
+        return res.json(CreateResponse(true, outgoingTransfers));
+        }
+
+        return res.json(CreateResponse(false, null, "Please specify incoming or outgoing transfers"));
+
+
     } catch (error) {
-        
+        return res.json(CreateResponse(false, null, error));
     }
 }

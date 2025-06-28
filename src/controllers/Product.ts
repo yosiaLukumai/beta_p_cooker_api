@@ -10,9 +10,6 @@ export const CreateProduct = async (req: Request, res: Response): Promise<any> =
     file.path.replace('', '')
   );
 
-  console.log(imagePaths);
-  
-
   try {
     const {
       name,
@@ -111,7 +108,7 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
 
 export const getProductNameAndIds = async (req: Request, res: Response): Promise<any> => {
   try {
-    const product = await Product.find({ is_active: true }).select("_id, name");
+    const product = await Product.find({ is_active: true }).select("_id starting_price payment_model name category subcategory description attributes");
     if (!product) {
       return res.json(CreateResponse(false, null, "Product not found"));
     }
