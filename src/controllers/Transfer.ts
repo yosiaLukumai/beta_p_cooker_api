@@ -124,6 +124,7 @@ export const allTransfers = async (req: Request, res: Response): Promise<any> =>
         const incomingTransfers = await ProductTransfer.find({ to_store: store_id, transfer_status: transfer_status || 'pending' })
         .populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"])
         .populate("from_store", ["name", "hq"])
+        .populate("to_store", ["name", "hq"])
         .select('product_id quantity to_store from_store quantity transfer_status')
         .sort({ createdAt: -1 })
         .limit(10);
