@@ -121,9 +121,10 @@ export const allTransfers = async (req: Request, res: Response): Promise<any> =>
 
         // by default incoming is true
         if(incoming && !outgoing) { 
-                    const incomingTransfers = await ProductTransfer.find({ to_store: store_id, transfer_status: transfer_status || 'pending' })
+        const incomingTransfers = await ProductTransfer.find({ to_store: store_id, transfer_status: transfer_status || 'pending' })
         .populate("product_id", ["name", "category", "subcategory", "payment_model", "description", "attributes", "images"])
         .populate("from_store", ["name", "hq"]).select('product_id quantity to_store')
+        .select("quantity transfer_status")
         .sort({ createdAt: -1 })
         .limit(10);
         if (!incomingTransfers) {
