@@ -76,7 +76,6 @@ import { CreateResponse } from '../util/response';
 
 
 export const createNewSale = async (req: Request, res: Response): Promise<any> => {
-    console.log('[createNewSale] Request body:', req.body);
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -87,17 +86,22 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
             servedBy,
             products,
             payments,
+            discount = 0, // Default to 0 if not provided
         }: {
             customer: {
                 name: string;
                 phone: string;
                 region: string;
                 address?: string;
+                district?: string;
+                ward?: string;
+                street?: string; 
             };
             store_id: string;
             servedBy: string;
             products: ISaleProduct[];
             payments: ISalePayment[];
+            discount?: number; // Optional discount field
         } = req.body;
 
         if (!store_id || !servedBy || !products?.length || !payments?.length) {
@@ -115,6 +119,9 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                         phone: customer.phone,
                         region: customer.region,
                         address: customer.address,
+                        district: customer.district,
+                        ward: customer.ward,
+                        street: customer.street, // village
                         servedBy,
                     },
                 ],
@@ -144,6 +151,7 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                     total_amount,
                     total_paid,
                     payment_status,
+                    discount: discount, // Optional discount field
                 },
             ],
             { session }
@@ -159,10 +167,12 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                 product_id,
             }).session(session);
 
+            
+
             if (!storeStock || storeStock.quantity < quantity) {
                 await session.abortTransaction();
                 session.endSession();
-                return res.status(400).json(
+                return res.json(
                     CreateResponse(
                         false,
                         null,
@@ -170,6 +180,7 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                     )
                 );
             }
+
 
             // Deduct stock
             storeStock.quantity -= quantity;
