@@ -1,9 +1,18 @@
 import { Request, Response } from 'express';
-import User from '../models/Users';
+import User, { IUser } from '../models/Users';
 import { CreateResponse } from '../util/response';
 import { comparePassword, hashPassword } from '../util/passwords';
 import mongoose from 'mongoose';
 import { send_sms } from '../services/sendsms';
+
+
+
+interface PopulatedUser extends Omit<IUser, 'store_id'> {
+    store_id: {
+        _id: string;
+        name: string;
+    } | null;
+}
 
 
 
@@ -44,7 +53,7 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
         if (saved) {
             // fire and immediate sms sending service to send the otp to the user
             setImmediate(async () => {
-                send_sms(`Hello ${fname}, Welcome to Positive Cooker Family your OTP for account setting is ${otp}. It is valid for 10 minutes.`, [{phone: phone}]);
+                send_sms(`Hello ${fname}, Welcome to Positive Cooker Family your OTP for account setting is ${otp}. It is valid for 10 minutes.`, [{ phone: phone }]);
             });
             return res.json(CreateResponse(true, "User created.."))
         } else {
@@ -64,7 +73,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
         if (!user) {
             return res.json(CreateResponse(false, null, "User not found"));
         }
-        
+
         const comparison = await comparePassword(password, user.password || "");
 
         if (comparison) {
@@ -81,18 +90,18 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
 
 export const setPassword = async (req: Request, res: Response): Promise<any> => {
     try {
-        const {email, otp, password} = req.body;
-        const user = await User.findOne({email});
-        if (!user  || user.otp_expires_at === undefined ) {
+        const { email, otp, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user || user.otp_expires_at === undefined) {
             return res.json(CreateResponse(false, null, "User not found"));
         }
 
         let now = new Date();
-        if (now.getTime() >  user.otp_expires_at.getTime()) {
+        if (now.getTime() > user.otp_expires_at.getTime()) {
             return res.json(CreateResponse(false, null, "OTP expired"));
         }
         // compare now the otp with the user otp
-         if (user.otp !== otp) {
+        if (user.otp !== otp) {
             return res.json(CreateResponse(false, null, "Incorrect OTP"));
         }
 
@@ -106,9 +115,9 @@ export const setPassword = async (req: Request, res: Response): Promise<any> => 
             return res.json(CreateResponse(false, null, "Failed to update password"));
         }
         return res.json(CreateResponse(true, "Password updated successfully"));
-        
 
-     } catch (error) {
+
+    } catch (error) {
         return res.json(CreateResponse(false, null, error));
     }
 }
@@ -147,7 +156,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<any> 
         if (!comparison) {
             return res.json(CreateResponse(false, null, "Incorrect previous password"));
         }
-       
+
         // hash password
         let hashedPassword = await hashPassword(password);
         if (!hashedPassword) {
@@ -180,13 +189,27 @@ export const getUsers = async (req: Request, res: Response): Promise<any> => {
         const users = await User.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(Number(limit));
-        if (!users) {
+            .limit(Number(limit))
+            .populate("store_id", "name") // only populate 'name'
+            .lean<PopulatedUser[]>(); // return plain JS objects
+
+        const transformedUsers = users.map((user) => {
+            const storeName = (user.store_id as { name: string } | null)?.name || null;
+
+            return {
+                ...user,
+                store_id: storeName,
+            };
+        });
+
+
+
+        if (!transformedUsers) {
             return res.json(CreateResponse(false, null, "Failed to get users"));
         }
         const total = await User.countDocuments(query);
         return res.json(CreateResponse(true, {
-            users,
+            users: transformedUsers,
             page: Number(page),
             totalPages: Math.ceil(total / Number(limit)),
             total,
