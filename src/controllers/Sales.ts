@@ -4,77 +4,107 @@ import Sale, { ISalePayment, ISaleProduct } from '../models/SalesPayment';
 import Customer from '../models/Customer';
 import StoreProduct from '../models/StoreProduct';
 import { CreateResponse } from '../util/response';
-import { IUser } from '../models/Users';
-
-// export const createNewSale = async (req: Request, res: Response): Promise<any> => {
-//     const session = await mongoose.startSession();
-//     session.startTransaction();
-
-//     try {
-//         const { customer, store_id, servedBy, products, payments } = req.body;
-
-//         if (!store_id || !servedBy || !products?.length || !payments?.length) {
-//             throw new Error('Missing required sale data.');
-//         }
-
-//         // Step 1: Check or Create Customer
-//         // let existingCustomer = await Customer.findOne({ phone: customer.phone }).session(session);
-//         let existingCustomer = await Customer.findOne({ phone: customer.phone }).session(session);
-
-//         if (!existingCustomer) {
-//             existingCustomer = await Customer.create(
-//                 [
-//                     {
-//                         name: customer.name,
-//                         phone: customer.phone,
-//                         region: customer.region,
-//                         address: customer.address,
-//                         servedBy,
-//                     },
-//                 ],
-//                 { session }
-//             ).then(res => res[0]);
-//         }
-
-//         const total_amount: number = products.reduce((sum: number, p) => sum + p.price * p.quantity, 0);
-// const total_paid: number = payments.reduce((sum: number, p) => sum + p.amount, 0);
-
-//         const payment_status =
-//             total_paid >= total_amount ? 'paid' : total_paid > 0 ? 'partial' : 'unpaid';
-
-//         // Step 3: Create Sale
-//         const sale = await Sale.create(
-//             [
-//                 {
-//                     customer_id: existingCustomer._id,
-
-//                     store_id,
-//                     servedBy,
-//                     products,
-//                     payments,
-//                     total_amount,
-//                     total_paid,
-//                     payment_status,
-//                 },
-//             ],
-//             { session }
-//         ).then(res => res[0]);
-
-//         await session.commitTransaction();
-//         session.endSession();
-
-//         return res
-//             .status(201)
-//             .json(CreateResponse(true, sale, 'Sale created successfully.'));
-//     } catch (error) {
-//         await session.abortTransaction();
-//         session.endSession();
-//         console.error('[createNewSale]', error);
-//         return res.status(500).json(CreateResponse(false, null, 'Failed to create sale.'));
-//     }
-// };
 
 
+interface KPIQuery {
+  filter?: 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+  from?: string;
+  to?: string;
+  store_id?: string;
+}
+
+const getDateRangeNew = (
+  filter: string,
+  from?: string,
+  to?: string
+): { start: Date; end: Date } => {
+  const now = new Date();
+
+  switch (filter) {
+    case 'today': {
+      const start = new Date(now.setHours(0, 0, 0, 0));
+      const end = new Date(now.setHours(23, 59, 59, 999));
+      return { start, end };
+    }
+    case 'yesterday': {
+      const yest = new Date();
+      yest.setDate(now.getDate() - 1);
+      const start = new Date(yest.setHours(0, 0, 0, 0));
+      const end = new Date(yest.setHours(23, 59, 59, 999));
+      return { start, end };
+    }
+    case 'week': {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+    case 'month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+    case 'custom': {
+      if (!from || !to) {
+        throw new Error('`from` and `to` are required for custom filter');
+      }
+      return { start: new Date(from), end: new Date(to) };
+    }
+    default:
+      throw new Error('Invalid filter value');
+  }
+};
+
+export const SalesKPI = async (
+  req: Request<{}, {}, {}, KPIQuery>,
+  res: Response
+): Promise<any> => {
+  try {
+    const { filter = 'today', from, to, store_id } = req.query;
+
+    if (!store_id) {
+      return res.json(CreateResponse(false, null, 'Store ID is required.'));
+    }
+
+    let startDate: Date;
+    let endDate: Date;
+
+    try {
+      ({ start: startDate, end: endDate } = getDateRangeNew(filter, from, to));
+    } catch (err: any) {
+      return res.json(CreateResponse(false, null, err.message));
+    }
+
+    const [data] = await Sale.aggregate([
+      {
+        $match: {
+          store_id: new Types.ObjectId(store_id),
+          createdAt: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: '$total_amount' },
+          totalPayments: { $sum: '$total_paid' },
+        },
+      },
+    ]);
+
+    const kpis = data ?? { totalSales: 0, totalPayments: 0 };
+
+    return res.status(200).json(CreateResponse(true, kpis));
+  } catch (error) {
+    console.error('[SalesKPI] Error:', error);
+    return res
+      .status(500)
+      .json(CreateResponse(false, null, 'Failed to fetch sales KPIs'));
+  }
+};
 
 export const createNewSale = async (req: Request, res: Response): Promise<any> => {
     const session = await mongoose.startSession();
@@ -200,217 +230,6 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
         return res.status(500).json(CreateResponse(false, null, error.message || 'Failed to create sale.'));
     }
 };
-
-
-
-
-
-// export const dailySalesReport = async (req: Request, res: Response): Promise<any> => {
-
-
-
-//   try {
-//     const { date } = req.query;
-
-//     if (!date) {
-//       return res.status(400).json(CreateResponse(false, null, 'Missing `date` query param'));
-//     }
-
-//     const startOfDay = new Date(date as string);
-//     startOfDay.setHours(0, 0, 0, 0);
-
-//     const endOfDay = new Date(date as string);
-//     endOfDay.setHours(23, 59, 59, 999);
-
-
-//     console.log(startOfDay, endOfDay);
-
-
-//     const sales = await Sale.aggregate([
-//       {
-//         $match: {
-//           createdAt: {
-//             $gte: startOfDay,
-//             $lte: endOfDay,
-//           },
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: 'customers',
-//           localField: 'customer_id',
-//           foreignField: '_id',
-//           as: 'customer',
-//         },
-//       },
-//       { $unwind: '$customer' },
-//       {
-//         $lookup: {
-//           from: 'users',
-//           localField: 'servedBy',
-//           foreignField: '_id',
-//           as: 'servedBy',
-//         },
-//       },
-//       { $unwind: '$servedBy' },
-//       {
-//         $lookup: {
-//           from: 'stores',
-//           localField: 'store_id',
-//           foreignField: '_id',
-//           as: 'store',
-//         },
-//       },
-//       { $unwind: '$store' },
-//       {
-//         $unwind: '$products',
-//       },
-//       {
-//         $lookup: {
-//           from: 'products',
-//           localField: 'products.product_id',
-//           foreignField: '_id',
-//           as: 'product_details',
-//         },
-//       },
-//       { $unwind: '$product_details' },
-//       {
-//         $group: {
-//           _id: '$_id',
-//           createdAt: { $first: '$createdAt' },
-//           customer: { $first: '$customer' },
-//           servedBy: { $first: '$servedBy' },
-//           store: { $first: '$store' },
-//           products: {
-//             $push: {
-//               name: '$product_details.name',
-//               category: '$product_details.category',
-//               quantity: '$products.quantity',
-//               price: '$products.price',
-//               serial_number: '$products.serial_number',
-//             },
-//           },
-//         },
-//       },
-//       { $sort: { createdAt: -1 } },
-//     ]);
-
-//     return res.status(200).json(CreateResponse(true, sales));
-//   } catch (error) {
-//     console.error('[dailySalesReport] Error:', error);
-//     return res.status(500).json(CreateResponse(false, null, 'Failed to fetch daily sales report'));
-//   }
-// };
-
-
-// export const dailySalesReport = async (req: Request, res: Response): Promise<any> => {
-//   try {
-//     const { filter = 'today', from, to, store_id, role } = req.query;
-
-//     let startDate: Date;
-//     let endDate: Date;
-
-//     const now = new Date();
-//     if (filter === 'today') {
-//       startDate = new Date(now.setHours(0, 0, 0, 0));
-//       endDate = new Date(now.setHours(23, 59, 59, 999));
-//     } else if (filter === 'yesterday') {
-//       const yest = new Date();
-//       yest.setDate(now.getDate() - 1);
-//       startDate = new Date(yest.setHours(0, 0, 0, 0));
-//       endDate = new Date(yest.setHours(23, 59, 59, 999));
-//     } else if (filter === 'custom') {
-//       if (!from || !to) {
-//         return res.status(400).json(CreateResponse(false, null, '`from` and `to` dates required'));
-//       }
-//       startDate = new Date(from as string);
-//       endDate = new Date(to as string);
-//     } else {
-//       return res.status(400).json(CreateResponse(false, null, 'Invalid `filter` value'));
-//     }
-
-//     // Determine store filter
-//     const storeFilter: any = {};
-//     if (store_id === 'all') {
-//       if (role !== 'admin') {
-//         return res.status(403).json(CreateResponse(false, null, 'Only admin can view all stores'));
-//       }
-//       // Admin with all access — no restriction
-//     } else {
-//       storeFilter.store_id = store_id;
-//     }
-
-//     const sales = await Sale.aggregate([
-//       {
-//         $match: {
-//           createdAt: { $gte: startDate, $lte: endDate },
-//           ...storeFilter,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: 'customers',
-//           localField: 'customer_id',
-//           foreignField: '_id',
-//           as: 'customer',
-//         },
-//       },
-//       { $unwind: '$customer' },
-//       {
-//         $lookup: {
-//           from: 'users',
-//           localField: 'servedBy',
-//           foreignField: '_id',
-//           as: 'servedBy',
-//         },
-//       },
-//       { $unwind: '$servedBy' },
-//       {
-//         $lookup: {
-//           from: 'stores',
-//           localField: 'store_id',
-//           foreignField: '_id',
-//           as: 'store',
-//         },
-//       },
-//       { $unwind: '$store' },
-//       { $unwind: '$products' },
-//       {
-//         $lookup: {
-//           from: 'products',
-//           localField: 'products.product_id',
-//           foreignField: '_id',
-//           as: 'product_details',
-//         },
-//       },
-//       { $unwind: '$product_details' },
-//       {
-//         $group: {
-//           _id: '$_id',
-//           createdAt: { $first: '$createdAt' },
-//           customer: { $first: '$customer' },
-//           servedBy: { $first: '$servedBy.name' }, // only name
-//           store: { $first: '$store.name' },       // only name
-//           products: {
-//             $push: {
-//               name: '$product_details.name',
-//               category: '$product_details.category',
-//               quantity: '$products.quantity',
-//               price: '$products.price',
-//               serial_number: '$products.serial_number',
-//             },
-//           },
-//         },
-//       },
-//       { $sort: { createdAt: -1 } },
-//     ]);
-
-//     return res.status(200).json(CreateResponse(true, sales));
-//   } catch (error) {
-//     console.error('[filteredSalesReport] Error:', error);
-//     return res.status(500).json(CreateResponse(false, null, 'Failed to fetch sales report'));
-//   }
-// };
 
 
 
