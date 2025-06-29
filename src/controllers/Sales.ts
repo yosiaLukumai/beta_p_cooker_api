@@ -110,6 +110,7 @@ export const SalesKPI = async (
 };
 
 
+
 interface SalePayment {
   method?: string;
   amount?: number;
