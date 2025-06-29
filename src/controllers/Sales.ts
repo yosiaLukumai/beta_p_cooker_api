@@ -109,6 +109,57 @@ export const SalesKPI = async (
   }
 };
 
+
+interface SalePayment {
+  method?: string;
+  amount?: number;
+  reference?: string;
+  description?: string; // formerly bank_name
+}
+
+function mapToISalePayment(input: SalePayment): ISalePayment {
+  const methodMap: Record<string, 'cash' | 'mobile' | 'bank'> = {
+    'CASH': 'cash',
+    'M-PESA': 'mobile',
+    'LIPA-NUMBER': 'mobile',
+    'CRDB': 'bank',
+    'NMB': 'bank',
+  };
+
+  const channelMap: Record<string, 'mpesa' | 'lipa_namba' | undefined> = {
+    'M-PESA': 'mpesa',
+    'LIPA-NUMBER': 'lipa_namba',
+  };
+
+  const bankNameFromMethod = (method?: string): 'CRDB' | 'NMB' | undefined => {
+    if (!method) return undefined;
+    const upper = method.toUpperCase();
+    if (upper === 'CRDB') return 'CRDB';
+    if (upper === 'NMB') return 'NMB';
+    return undefined;
+  };
+
+  const rawMethod = input.method?.toUpperCase() ?? '';
+  const mappedMethod = methodMap[rawMethod];
+  const mappedChannel = channelMap[rawMethod];
+  const mappedBankName = bankNameFromMethod(rawMethod);
+
+  if (!mappedMethod || input.amount == null) {
+    throw new Error(`Invalid SalePayment input: ${JSON.stringify(input)}`);
+  }
+
+  return {
+    method: mappedMethod,
+    amount: input.amount,
+    reference: input.reference,
+    bank_name: mappedBankName,
+    channel: mappedChannel,
+    paid_at: new Date(),
+    description: input.description,
+  };
+}
+
+
 export const createNewSale = async (req: Request, res: Response): Promise<any> => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -119,7 +170,7 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
             store_id,
             servedBy,
             products,
-            payments,
+            payment,
             discount = 0,
         }: {
             customer: {
@@ -133,9 +184,11 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
             store_id: string;
             servedBy: string;
             products: ISaleProduct[];
-            payments: ISalePayment[];
+            payment: SalePayment[];
             discount?: number; // Optional discount field
         } = req.body;
+
+        let payments = payment.map(mapToISalePayment);
 
         if (!store_id || !servedBy || !products?.length || !payments?.length) {
             throw new Error('Missing required sale data.');

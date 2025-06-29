@@ -11,6 +11,7 @@ export interface ISalePayment {
     method: 'cash' | 'mobile' | 'bank';
     amount: number;
     reference?: string;
+    description?: string;
     bank_name?: 'NMB' | 'CRDB';
     channel?: 'lipa_namba' | 'mpesa';
     paid_at: Date;
@@ -64,6 +65,7 @@ const SalePaymentSchema = new Schema<ISalePayment>(
                 return this.method === 'bank';
             },
         },
+        description: String,
         channel: {
             type: String,
             enum: ['lipa_namba', 'mpesa'],
