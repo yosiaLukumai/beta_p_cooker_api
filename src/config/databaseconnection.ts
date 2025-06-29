@@ -4,7 +4,9 @@ import { exit } from 'process';
 
 export async function ConnectToDatabase() {
     try {
-        let databaseConnection = process.env.DATABASE_CONNECTION_STR;
+        let productionFlag = process.env.PROD_READY
+        
+        let databaseConnection = Boolean(productionFlag) ? process.env.DATABASE_CONNECTION_STR_PROD : process.env.DATABASE_CONNECTION_STR;
         if (!databaseConnection) {
             console.log("No database connection string found");
             exit(1);

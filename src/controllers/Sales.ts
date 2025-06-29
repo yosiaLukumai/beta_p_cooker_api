@@ -190,10 +190,6 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
         } = req.body;
 
         let payments = payment.map(mapToISalePayment);
-
-        console.log(payments);
-        
-
         if (!store_id || !servedBy || !products?.length || !payments?.length) {
             throw new Error('Missing required sale data.');
         }

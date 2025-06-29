@@ -4,6 +4,8 @@ dotenv.config();
 
 interface Config {
   port: number;
+  prod_port: number;
+  PROD_READY: boolean;
   nodeEnv: string;
 }
 
@@ -14,6 +16,8 @@ interface QueryConfig {
 
 const config: Config = {
   port: Number(process.env.PORT) || 2313,
+  prod_port: Number(process.env.PORT_PROD) || 3973,
+  PROD_READY: Boolean(process.env.PROD_READY) || false,
   nodeEnv: process.env.NODE_ENV || 'development',
 };
 
