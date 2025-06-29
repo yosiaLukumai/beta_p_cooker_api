@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import Customer from "../models/Customer";
+import Sale from '../models/SalesPayment';
+
 import { CreateResponse } from "../util/response";
 
 export const searchCustomer = async (req: Request, res: Response): Promise<any> => {
@@ -41,43 +43,108 @@ export const createCustomer = async (req: Request, res: Response): Promise<any> 
 }
 
 
+// export const tabularCustomer = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { page = 1, limit = 10, q, region, district, ward, street } = req.query;
+//         const query: any = {};
+//         if (q) {
+//             query.$or = [
+//                 { name: { $regex: q, $options: 'i' } },
+//                 { phone: { $regex: q, $options: 'i' } },
+//             ];
+//         }
+
+//         if (region) query.region = region;
+//         if (district) query.district = district;
+//         if (ward) query.ward = ward;
+//         if (street) query.street = street;
+
+//         const skip = (Number(page) - 1) * Number(limit);
+
+//         const customers = await Customer.find(query)
+//             .sort({ createdAt: -1 })
+//             .skip(skip)
+//             .limit(Number(limit));
+
+//         const total = await Customer.countDocuments(query);
+
+//         return res.json(
+//             CreateResponse(true, {
+//                 customers,
+//                 page: Number(page),
+//                 totalPages: Math.ceil(total / Number(limit)),
+//                 total,
+//             })
+//         );
+//     } catch (error) {
+//         console.error('[tabularCustomer] Error:', error);
+//         return res.json(
+//             CreateResponse(false, null, 'Something went wrong while fetching customers')
+//         );
+//     }   
+// }
+
+
+
 export const tabularCustomer = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { page = 1, limit = 10, q, region, district, ward, street } = req.query;
-        const query: any = {};
-        if (q) {
-            query.$or = [
-                { name: { $regex: q, $options: 'i' } },
-                { phone: { $regex: q, $options: 'i' } },
-            ];
-        }
+  try {
+    const { page = 1, limit = 10, q, region, district, ward, street } = req.query;
+    const query: any = {};
+    if (q) {
+      query.$or = [
+        { name: { $regex: q, $options: 'i' } },
+        { phone: { $regex: q, $options: 'i' } },
+      ];
+    }
 
-        if (region) query.region = region;
-        if (district) query.district = district;
-        if (ward) query.ward = ward;
-        if (street) query.street = street;
+    if (region) query.region = region;
+    if (district) query.district = district;
+    if (ward) query.ward = ward;
+    if (street) query.street = street;
 
-        const skip = (Number(page) - 1) * Number(limit);
+    const skip = (Number(page) - 1) * Number(limit);
 
-        const customers = await Customer.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(Number(limit));
+    const customers = await Customer.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
 
-        const total = await Customer.countDocuments(query);
+    const total = await Customer.countDocuments(query);
 
-        return res.json(
-            CreateResponse(true, {
-                customers,
-                page: Number(page),
-                totalPages: Math.ceil(total / Number(limit)),
-                total,
-            })
+    // Enrich each customer with product(s) info
+    const enrichedCustomers = await Promise.all(
+      customers.map(async (customer) => {
+        const sales = await Sale.find({ customer_id: customer._id }).populate('products.product_id');
+
+        const purchasedProducts = sales.flatMap((sale) =>
+          sale.products.map((p) => ({
+            name: (p.product_id as any)?.name || 'Unknown',
+            category: (p.product_id as any)?.category || 'Unknown',
+            quantity: p.quantity,
+            price: p.price,
+          }))
         );
-    } catch (error) {
-        console.error('[tabularCustomer] Error:', error);
-        return res.json(
-            CreateResponse(false, null, 'Something went wrong while fetching customers')
-        );
-    }   
-}
+
+        return {
+          ...customer.toObject(),
+          products: purchasedProducts,
+        };
+      })
+    );
+
+    return res.json(
+      CreateResponse(true, {
+        customers: enrichedCustomers,
+        page: Number(page),
+        totalPages: Math.ceil(total / Number(limit)),
+        total,
+      })
+    );
+  } catch (error) {
+    console.error('[tabularCustomer] Error:', error);
+    return res.json(
+      CreateResponse(false, null, 'Something went wrong while fetching customers')
+    );
+  }
+};
+

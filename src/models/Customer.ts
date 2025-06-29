@@ -5,6 +5,7 @@ export interface ICustomer extends Document {
     phone: string;
     region: string;
     district?: string;
+    password?: string;
     ward?: string;
     street?: string; // village
     servedBy?: mongoose.Types.ObjectId;
@@ -20,6 +21,7 @@ const CustomerSchema = new Schema<ICustomer>(
         district: { type: String },
         ward: { type: String },
         street: { type: String },
+        password: { type: String, default: null }, // Optional password field
         servedBy: { type: mongoose.Types.ObjectId, ref: 'User' },
     },
     { timestamps: true }

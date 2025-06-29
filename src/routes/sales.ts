@@ -5,6 +5,7 @@ const router: Router = express.Router();
 
 const salesRoutes = (app: Express): Express => {
     router.post('/', salesController.createNewSale);
+    router.get('/daily-report', salesController.dailySalesReport);
     return app.use('/sales', router);
 };
 

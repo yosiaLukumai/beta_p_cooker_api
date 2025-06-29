@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import Sale, { ISalePayment, ISaleProduct } from '../models/SalesPayment';
 import Customer from '../models/Customer';
 import StoreProduct from '../models/StoreProduct';
 import { CreateResponse } from '../util/response';
+import { IUser } from '../models/Users';
 
 // export const createNewSale = async (req: Request, res: Response): Promise<any> => {
 //     const session = await mongoose.startSession();
@@ -86,16 +87,15 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
             servedBy,
             products,
             payments,
-            discount = 0, // Default to 0 if not provided
+            discount = 0,
         }: {
             customer: {
                 name: string;
                 phone: string;
                 region: string;
-                address?: string;
+                street?: string;
                 district?: string;
                 ward?: string;
-                street?: string; 
             };
             store_id: string;
             servedBy: string;
@@ -118,7 +118,6 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                         name: customer.name,
                         phone: customer.phone,
                         region: customer.region,
-                        address: customer.address,
                         district: customer.district,
                         ward: customer.ward,
                         street: customer.street, // village
@@ -167,7 +166,7 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
                 product_id,
             }).session(session);
 
-            
+
 
             if (!storeStock || storeStock.quantity < quantity) {
                 await session.abortTransaction();
@@ -200,4 +199,410 @@ export const createNewSale = async (req: Request, res: Response): Promise<any> =
         console.error('[createNewSale]', error);
         return res.status(500).json(CreateResponse(false, null, error.message || 'Failed to create sale.'));
     }
+};
+
+
+
+
+
+// export const dailySalesReport = async (req: Request, res: Response): Promise<any> => {
+
+
+
+//   try {
+//     const { date } = req.query;
+
+//     if (!date) {
+//       return res.status(400).json(CreateResponse(false, null, 'Missing `date` query param'));
+//     }
+
+//     const startOfDay = new Date(date as string);
+//     startOfDay.setHours(0, 0, 0, 0);
+
+//     const endOfDay = new Date(date as string);
+//     endOfDay.setHours(23, 59, 59, 999);
+
+
+//     console.log(startOfDay, endOfDay);
+
+
+//     const sales = await Sale.aggregate([
+//       {
+//         $match: {
+//           createdAt: {
+//             $gte: startOfDay,
+//             $lte: endOfDay,
+//           },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'customers',
+//           localField: 'customer_id',
+//           foreignField: '_id',
+//           as: 'customer',
+//         },
+//       },
+//       { $unwind: '$customer' },
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'servedBy',
+//           foreignField: '_id',
+//           as: 'servedBy',
+//         },
+//       },
+//       { $unwind: '$servedBy' },
+//       {
+//         $lookup: {
+//           from: 'stores',
+//           localField: 'store_id',
+//           foreignField: '_id',
+//           as: 'store',
+//         },
+//       },
+//       { $unwind: '$store' },
+//       {
+//         $unwind: '$products',
+//       },
+//       {
+//         $lookup: {
+//           from: 'products',
+//           localField: 'products.product_id',
+//           foreignField: '_id',
+//           as: 'product_details',
+//         },
+//       },
+//       { $unwind: '$product_details' },
+//       {
+//         $group: {
+//           _id: '$_id',
+//           createdAt: { $first: '$createdAt' },
+//           customer: { $first: '$customer' },
+//           servedBy: { $first: '$servedBy' },
+//           store: { $first: '$store' },
+//           products: {
+//             $push: {
+//               name: '$product_details.name',
+//               category: '$product_details.category',
+//               quantity: '$products.quantity',
+//               price: '$products.price',
+//               serial_number: '$products.serial_number',
+//             },
+//           },
+//         },
+//       },
+//       { $sort: { createdAt: -1 } },
+//     ]);
+
+//     return res.status(200).json(CreateResponse(true, sales));
+//   } catch (error) {
+//     console.error('[dailySalesReport] Error:', error);
+//     return res.status(500).json(CreateResponse(false, null, 'Failed to fetch daily sales report'));
+//   }
+// };
+
+
+// export const dailySalesReport = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { filter = 'today', from, to, store_id, role } = req.query;
+
+//     let startDate: Date;
+//     let endDate: Date;
+
+//     const now = new Date();
+//     if (filter === 'today') {
+//       startDate = new Date(now.setHours(0, 0, 0, 0));
+//       endDate = new Date(now.setHours(23, 59, 59, 999));
+//     } else if (filter === 'yesterday') {
+//       const yest = new Date();
+//       yest.setDate(now.getDate() - 1);
+//       startDate = new Date(yest.setHours(0, 0, 0, 0));
+//       endDate = new Date(yest.setHours(23, 59, 59, 999));
+//     } else if (filter === 'custom') {
+//       if (!from || !to) {
+//         return res.status(400).json(CreateResponse(false, null, '`from` and `to` dates required'));
+//       }
+//       startDate = new Date(from as string);
+//       endDate = new Date(to as string);
+//     } else {
+//       return res.status(400).json(CreateResponse(false, null, 'Invalid `filter` value'));
+//     }
+
+//     // Determine store filter
+//     const storeFilter: any = {};
+//     if (store_id === 'all') {
+//       if (role !== 'admin') {
+//         return res.status(403).json(CreateResponse(false, null, 'Only admin can view all stores'));
+//       }
+//       // Admin with all access — no restriction
+//     } else {
+//       storeFilter.store_id = store_id;
+//     }
+
+//     const sales = await Sale.aggregate([
+//       {
+//         $match: {
+//           createdAt: { $gte: startDate, $lte: endDate },
+//           ...storeFilter,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'customers',
+//           localField: 'customer_id',
+//           foreignField: '_id',
+//           as: 'customer',
+//         },
+//       },
+//       { $unwind: '$customer' },
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'servedBy',
+//           foreignField: '_id',
+//           as: 'servedBy',
+//         },
+//       },
+//       { $unwind: '$servedBy' },
+//       {
+//         $lookup: {
+//           from: 'stores',
+//           localField: 'store_id',
+//           foreignField: '_id',
+//           as: 'store',
+//         },
+//       },
+//       { $unwind: '$store' },
+//       { $unwind: '$products' },
+//       {
+//         $lookup: {
+//           from: 'products',
+//           localField: 'products.product_id',
+//           foreignField: '_id',
+//           as: 'product_details',
+//         },
+//       },
+//       { $unwind: '$product_details' },
+//       {
+//         $group: {
+//           _id: '$_id',
+//           createdAt: { $first: '$createdAt' },
+//           customer: { $first: '$customer' },
+//           servedBy: { $first: '$servedBy.name' }, // only name
+//           store: { $first: '$store.name' },       // only name
+//           products: {
+//             $push: {
+//               name: '$product_details.name',
+//               category: '$product_details.category',
+//               quantity: '$products.quantity',
+//               price: '$products.price',
+//               serial_number: '$products.serial_number',
+//             },
+//           },
+//         },
+//       },
+//       { $sort: { createdAt: -1 } },
+//     ]);
+
+//     return res.status(200).json(CreateResponse(true, sales));
+//   } catch (error) {
+//     console.error('[filteredSalesReport] Error:', error);
+//     return res.status(500).json(CreateResponse(false, null, 'Failed to fetch sales report'));
+//   }
+// };
+
+
+
+
+interface QueryParams {
+    filter?: 'today' | 'yesterday' | 'custom';
+    from?: string;
+    to?: string;
+    store_id?: string;
+    role?: 'admin' | 'sales' | 'accountant';
+    page?: string;
+    limit?: string;
+}
+
+const getDateRange = (filter: string, from?: string, to?: string): { start: Date; end: Date } => {
+    const now = new Date();
+
+
+
+    switch (filter) {
+        case 'today': {
+            const start = new Date(now);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(now);
+            end.setHours(23, 59, 59, 999);
+            return { start, end };
+        }
+        case 'yesterday': {
+            const yest = new Date(now);
+            yest.setDate(now.getDate() - 1);
+            yest.setHours(0, 0, 0, 0);
+            const end = new Date(yest);
+            end.setHours(23, 59, 59, 999);
+            return { start: yest, end };
+        }
+        case 'custom': {
+            if (!from || !to) {
+                throw new Error('`from` and `to` dates required');
+            }
+            return {
+                start: new Date(from),
+                end: new Date(to),
+            };
+        }
+        default:
+            throw new Error('Invalid `filter` value');
+    }
+};
+
+
+
+export const dailySalesReport = async (
+  req: Request<{}, {}, {}, QueryParams>,
+  res: Response
+): Promise<any> => {
+  try {
+    const {
+      filter = 'today',
+      from,
+      to,
+      store_id,
+      role,
+      page = '1',
+      limit = '10',
+    } = req.query;
+
+    // ⏱️ Date range
+    let startDate: Date;
+    let endDate: Date;
+
+    try {
+      const { start, end } = getDateRange(filter, from, to);
+      startDate = start;
+      endDate = end;
+    } catch (err: any) {
+      return res
+        .status(400)
+        .json(CreateResponse(false, null, err.message || 'Invalid date range'));
+    }
+
+    // 🏪 Store access control
+    const storeFilter: Record<string, unknown> = {};
+    if (store_id === 'all') {
+      if (role !== 'admin') {
+        return res
+          .status(403)
+          .json(CreateResponse(false, null, 'Only admin can view all stores'));
+      }
+    } else if (store_id) {
+      storeFilter.store_id = new Types.ObjectId(store_id);
+    }
+
+    // 📄 Pagination logic
+    const currentPage = Math.max(1, parseInt(page));
+    const pageSize = Math.max(1, parseInt(limit));
+    const skip = (currentPage - 1) * pageSize;
+
+    // 🧠 Aggregation
+    const results = await Sale.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate, $lte: endDate },
+          ...storeFilter,
+        },
+      },
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'customer_id',
+          foreignField: '_id',
+          as: 'customer',
+        },
+      },
+      { $unwind: '$customer' },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'servedBy',
+          foreignField: '_id',
+          as: 'servedBy',
+        },
+      },
+      { $unwind: '$servedBy' },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'store_id',
+          foreignField: '_id',
+          as: 'store',
+        },
+      },
+      { $unwind: '$store' },
+      { $unwind: '$products' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'products.product_id',
+          foreignField: '_id',
+          as: 'product_details',
+        },
+      },
+      { $unwind: '$product_details' },
+      {
+        $group: {
+          _id: '$_id',
+          createdAt: { $first: '$createdAt' },
+          customer: { $first: '$customer' },
+          servedBy: {
+            $first: {
+              $concat: [
+                { $ifNull: ['$servedBy.fname', ''] },
+                ' ',
+                { $ifNull: ['$servedBy.lname', ''] },
+              ],
+            },
+          },
+          store: { $first: '$store.name' },
+          products: {
+            $push: {
+              name: '$product_details.name',
+              category: '$product_details.category',
+              quantity: '$products.quantity',
+              price: '$products.price',
+              serial_number: '$products.serial_number',
+            },
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          paginatedResults: [{ $skip: skip }, { $limit: pageSize }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ]);
+
+    const sales = results[0]?.paginatedResults || [];
+    const total = results[0]?.totalCount[0]?.count || 0;
+
+    return res.status(200).json(
+      CreateResponse(true, {
+        total,
+        currentPage,
+        totalPages: Math.ceil(total / pageSize),
+        pageSize,
+        data: sales,
+      })
+    );
+  } catch (error) {
+    console.error('[dailySalesReport] Error:', error);
+    return res
+      .json(CreateResponse(false, null, 'Failed to fetch sales report'));
+  }
 };
