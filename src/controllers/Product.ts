@@ -172,3 +172,16 @@ export const deactivateProduct = async (req: Request, res: Response): Promise<an
     return res.json(CreateResponse(false, null, error));
   }
 };
+
+
+export const productIdandName = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const product = await Product.find().select("_id name");
+    if (!product) {
+      return res.json(CreateResponse(false, null, "Products not found"));
+    }
+    return res.json(CreateResponse(true, product));
+  } catch (error) {
+    return res.json(CreateResponse(false, null, error));
+  }
+};

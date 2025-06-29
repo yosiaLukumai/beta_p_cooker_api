@@ -30,6 +30,7 @@ const productRoutes = (app: Express): Express => {
     router.patch('/:id', productController.UpdateProduct);
     router.get("/deactivate/:id/:flag", productController.deactivateProduct);
     router.get('/name', productController.getProductNameAndIds);
+    router.get('/name/id', productController.productIdandName);
     return app.use('/products', router);
 };
 
