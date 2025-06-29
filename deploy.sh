@@ -1,9 +1,9 @@
 #!/bin/bash
-WORKING_DIR="/home/afrimetering/server/beta_p_cooker_api"
+WORKING_DIR="/home/afrimetering/prod/beta_p_cooker_api"
 TARGET_BRANCH="master"
 REPOSITORY="git@github.com:yosiaLukumai/beta_p_cooker_api.git"
 ENV_FILE_SOURCE=".env" # Path to the .env file relative to the script's execution
-PM2_PROCESS_ID="0"
+PM2_PROCESS_ID="1"
 
 # --- Script Logic ---
 echo "Starting deployment script..."
