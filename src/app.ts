@@ -22,7 +22,7 @@ app.use(cors());
 
 // testing the server
 app.get("/ping", (req, res) => {
-    res.send("pong 👌 positive cooker api is Live! for real");
+    res.send("Pong production 👌 positive cooker api is Live! for real");
 });
 
 userRoutes(app);
@@ -36,6 +36,7 @@ inventoryRoutes(app);
 
 // allow uploading files
 app.use('/public', express.static('public'));
+
 
 
 

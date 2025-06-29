@@ -4,6 +4,8 @@ import { ConnectToDatabase } from './config/databaseconnection';
 
 ConnectToDatabase();
 
+
+
 const configuredPort = config.PROD_READY ? config.prod_port : config.port;
 
 
