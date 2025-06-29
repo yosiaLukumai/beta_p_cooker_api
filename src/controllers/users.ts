@@ -67,9 +67,9 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
 
 
 export const loginUser = async (req: Request, res: Response): Promise<any> => {
-    const { email, password } = req.body;
+    const { phone, password } = req.body;
     try {
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ phone })
         .populate('store_id', 'name hq') // populate only the 'name' and 'hq' fields
         .select('-otp -otp_expires_at -__v');
         if (!user) {
