@@ -66,6 +66,9 @@ export const SalesKPI = async (
   try {
     const { filter = 'today', from, to, store_id } = req.query;
 
+    console.log("Hitted", filter, from, to, store_id);
+    
+
     if (!store_id) {
       return res.json(CreateResponse(false, null, 'Store ID is required.'));
     }
