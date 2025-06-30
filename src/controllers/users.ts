@@ -27,9 +27,8 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
             return res.json(CreateResponse(false, null, "You are not allowed to create user"));
         }
 
-        console.log("Store id", store_id.name);
         // check if the id's are valid mongodb object ids
-        if (!mongoose.Types.ObjectId.isValid(store_id)) {
+        if (!mongoose.Types.ObjectId.isValid(store_id.name)) {
             return res.json(CreateResponse(false, null, "Invalid store id"));
         }
 
@@ -44,7 +43,7 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
             phone,
             role,
             // password: "", // password will be set later
-            store_id: store_id,
+            store_id: store_id.name,
             is_active: false, // until when the password is set
             otp,
             otp_expires_at,
