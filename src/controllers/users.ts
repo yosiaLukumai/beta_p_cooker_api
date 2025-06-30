@@ -94,7 +94,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
 export const setPassword = async (req: Request, res: Response): Promise<any> => {
     try {
         const { email, otp, password } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone: email });
         if (!user || user.otp_expires_at === undefined) {
             return res.json(CreateResponse(false, null, "User not found"));
         }
