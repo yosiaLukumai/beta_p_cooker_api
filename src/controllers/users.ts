@@ -26,6 +26,8 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
         if (sys_user_role !== 'admin') {
             return res.json(CreateResponse(false, null, "You are not allowed to create user"));
         }
+
+        console.log("Store id", store_id);
         // check if the id's are valid mongodb object ids
         if (!mongoose.Types.ObjectId.isValid(store_id)) {
             return res.json(CreateResponse(false, null, "Invalid store id"));
