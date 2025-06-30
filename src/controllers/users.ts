@@ -33,7 +33,7 @@ export const addUser = async (req: Request, res: Response): Promise<any> => {
 
         // create an otp then save it 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+        const otp_expires_at = new Date(Date.now() + 50 * 60 * 1000);
         console.log(otp, otp_expires_at);
         let saved = await User.create({
             email,
