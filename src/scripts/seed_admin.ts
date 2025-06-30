@@ -4,7 +4,7 @@ dotenv.config();
 import User from '../models/Users';
 import { hashPassword } from '../util/passwords';
 
-const MONGO_URI = process.env.DATABASE_CONNECTION_STR;
+const MONGO_URI = Boolean(process.env.PROD_READY) ? process.env.DATABASE_CONNECTION_STR_PROD : process.env.DATABASE_CONNECTION_STR;
 const adminPassword = process.env.ADMIN_PASSWORD;
 const admingEmail = process.env.ADMIN_EMAIL
 const admingPhone = process.env.ADMIN_PHONE;
